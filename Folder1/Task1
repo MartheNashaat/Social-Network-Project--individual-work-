@@ -1,1 +1,223 @@
 
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "name": "Omdena-PlantDisease.ipynb",
+      "provenance": [],
+      "collapsed_sections": []
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "source": [
+        "\n",
+        "# Omdena-Plant Disease Object Detection\n",
+        "\n",
+        "---\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "cgeLEK0-SLUk"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "### Imports"
+      ],
+      "metadata": {
+        "id": "D9smIzvrKNxN"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import zipfile\n",
+        "import numpy as np\n",
+        "from PIL import Image\n",
+        "import pandas as pd\n",
+        "import xml.etree.cElementTree as et\n",
+        "import csv\n",
+        "import tensorflow as tf"
+      ],
+      "metadata": {
+        "id": "UHn2VxsEbSs_"
+      },
+      "execution_count": 42,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## Data Processing\n",
+        "\n",
+        "---\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "W0OMM6UX11KO"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "### Read XML file"
+      ],
+      "metadata": {
+        "id": "4HALylLfSbPE"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "TrainArray=[]\n",
+        "TestArray=[]\n",
+        "\n",
+        "Folder=[]\n",
+        "Filename=[]\n",
+        "Path=[]\n",
+        "Source=[]\n",
+        "Size=[]\n",
+        "Segmented=[]\n",
+        "Object=[]\n",
+        "Database=[]\n",
+        "Name=[]\n",
+        "Pose=[]\n",
+        "Truncated=[]\n",
+        "Difficult=[]\n",
+        "Occluded=[]\n",
+        "Width=[]\n",
+        "Height=[]\n",
+        "Depth=[]\n",
+        "Xmin=[]\n",
+        "Xmax=[]\n",
+        "Ymin=[]\n",
+        "Ymax=[]\n",
+        "#Open the zip file\n",
+        "ReadZip = zipfile.ZipFile('/content/drive/MyDrive/Colab Notebooks/PlantDoc.v3-raw.voc.zip', mode='r')\n",
+        "NameList=np.array(ReadZip.namelist() )#Name list of elements\n",
+        "\n",
+        "for file in NameList:\n",
+        "  if file.endswith('.xml'):\n",
+        "    x=ReadZip.open(file)  \n",
+        "    tree =et.parse(x)\n",
+        "    root=tree.getroot()\n",
+        "    for name in root.findall('folder'):\n",
+        "      Folder.append(name.find('folder'))\n",
+        "    for name in root.findall('filename'):\n",
+        "      Filename.append(str(name.text))\n",
+        "    for name in root.findall('path'):\n",
+        "      Path.append(str(name.text))\n",
+        "    for name in root.findall('size'):\n",
+        "      value=name[0].text\n",
+        "      Width.append(int(value))\n",
+        "      value1=name[1].text\n",
+        "      Height.append(int(value1))\n",
+        "      value2=name[2].text\n",
+        "      Depth.append(int(value2))\n",
+        "    for name in root.findall('segmented'):\n",
+        "      Segmented.append(name.text)\n",
+        "    for name in root.findall('object'):\n",
+        "      Name.append(str(name[0].text)) #name\n",
+        "      Pose.append(str(name[1].text))\n",
+        "      Truncated.append(int(name[2].text))\n",
+        "      Difficult.append(int(name[3].text))\n",
+        "      Occluded.append(int(name[4].text))\n",
+        "\n",
+        "      value1=name.findall('bndbox')\n",
+        "      xmin=int(value1[0][0].text)\n",
+        "      Xmin.append(xmin)\n",
+        "      xmax=int(value1[0][1].text)\n",
+        "      Xmax.append(xmax)\n",
+        "      ymin=int(value1[0][2].text)\n",
+        "      Ymin.append(ymin)\n",
+        "      ymax=int(value1[0][3].text)\n",
+        "      Ymax.append(ymax)\n",
+        "\n",
+        "    array_img =np.array(root)\n",
+        "    if file.startswith('train/'):\n",
+        "      TrainArray.append(array_img)\n",
+        "    if file.startswith('test/'):\n",
+        "      TestArray.append(array_img)\n",
+        "\n",
+        "TrainArray=np.array(TrainArray)\n",
+        "TestArray=np.array(TestArray)\n",
+        "\n",
+        "print(TrainArray.shape)\n",
+        "print(TestArray.shape)\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "rXgigKtehrnf",
+        "outputId": "42f3b7e9-4a56-447d-877c-b2ae2aa68116"
+      },
+      "execution_count": 2,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "/usr/local/lib/python3.7/dist-packages/ipykernel_launcher.py:65: VisibleDeprecationWarning: Creating an ndarray from ragged nested sequences (which is a list-or-tuple of lists-or-tuples-or ndarrays with different lengths or shapes) is deprecated. If you meant to do this, you must specify 'dtype=object' when creating the ndarray.\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "(2330,)\n",
+            "(239,)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "/usr/local/lib/python3.7/dist-packages/ipykernel_launcher.py:71: VisibleDeprecationWarning: Creating an ndarray from ragged nested sequences (which is a list-or-tuple of lists-or-tuples-or ndarrays with different lengths or shapes) is deprecated. If you meant to do this, you must specify 'dtype=object' when creating the ndarray.\n",
+            "/usr/local/lib/python3.7/dist-packages/ipykernel_launcher.py:72: VisibleDeprecationWarning: Creating an ndarray from ragged nested sequences (which is a list-or-tuple of lists-or-tuples-or ndarrays with different lengths or shapes) is deprecated. If you meant to do this, you must specify 'dtype=object' when creating the ndarray.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "### XML to CSV file"
+      ],
+      "metadata": {
+        "id": "AlqkaxiySjd6"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "data=[Folder,Filename,Path,Source,Size,Width,Height,\n",
+        "      Depth,Segmented,Database,\n",
+        "      Name,Pose,\n",
+        "      Truncated,Difficult,Occluded,Object,Xmin,Xmax,Ymin,Ymax]\n",
+        "\n",
+        "columns_Name=['Folder','Filename','Path','Source','Size','Width','Height','Depth','Segmented','Database','Name','Pose','Truncated','Difficult','Occluded','Object','Xmin','Xmax','Ymin','Ymax']\n",
+        "\n",
+        "Train_DataFrame=pd.DataFrame(data, index=columns_Name)\n",
+        "Train_DataFrame=Train_DataFrame.replace([np.nan],'None')\n",
+        "Train_DataFrame.to_csv(\"/content/drive/MyDrive/Colab Notebooks/TrainData.csv\")"
+      ],
+      "metadata": {
+        "id": "BcD1NNrxcVks"
+      },
+      "execution_count": 3,
+      "outputs": []
+    }
+  ]
+}
